@@ -1,0 +1,2 @@
+[console_scripts]
+jssp-yafs = jssp_yafs.cli:main

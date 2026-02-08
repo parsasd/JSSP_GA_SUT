@@ -1,0 +1,184 @@
+Metadata-Version: 2.1
+Name: jssp-yafs
+Version: 0.1.0
+Summary: Multi-objective JSSP optimization with YAFS-coupled edge/fog/cloud simulation
+Author: Research Engineering Template
+License: MIT
+Requires-Python: <3.13,>=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy==1.26.4
+Requires-Dist: pandas==2.2.2
+Requires-Dist: networkx==3.2.1
+Requires-Dist: matplotlib==3.10.8
+Requires-Dist: seaborn==0.13.2
+Requires-Dist: scipy==1.14.1
+Requires-Dist: pyyaml==6.0.2
+Requires-Dist: tqdm==4.66.5
+Requires-Dist: diskcache==5.6.3
+Requires-Dist: pymoo==0.6.1.3
+Requires-Dist: yafs@ git+https://github.com/acsicuib/YAFS.git@09777042bf50c38a1c3edaa2cbf32ab63c4d6824
+Provides-Extra: dev
+Requires-Dist: pytest==8.3.3; extra == "dev"
+
+# JSSP-YAFS: Multi-Objective JSSP Optimization with Edge/Fog/Cloud Simulation
+
+This repository implements a reproducible research pipeline for Job-Shop Scheduling (JSSP) where candidate schedules are evaluated against an edge/fog/cloud infrastructure modeled with YAFS primitives.
+
+## Research Scope
+
+Objectives:
+1. Minimize makespan.
+2. Minimize total energy consumption (compute + communication + idle).
+3. Maximize reliability (implemented as minimizing `1 - reliability`).
+
+Optimization core:
+- NSGA-II baseline (`plain_ga`)
+- Enhanced NSGA-II (`enhanced_ga`) with:
+  - Smart initialization (heuristic + diverse seeding)
+  - Adaptive operator selection (UCB1 bandit AOS)
+  - Memetic local search
+
+Baselines and studies:
+- Classic heuristics: `heuristic_spt`, `heuristic_mwr`
+- Ablations: `ablation_no_aos`, `ablation_no_local_search`, `ablation_no_smart_init`
+- Statistical testing: Friedman + pairwise Wilcoxon + Holm correction
+
+## Repository Tree
+
+```text
+.
+├── .github/workflows/ci.yml
+├── configs/
+│   ├── smoke.yaml
+│   └── full.yaml
+├── data/
+│   ├── licenses/
+│   ├── manifests/
+│   ├── processed/
+│   └── raw/
+├── docs/
+├── scripts/
+├── src/jssp_yafs/
+│   ├── cli.py
+│   ├── config.py
+│   ├── data/
+│   ├── experiments/
+│   ├── moea/
+│   ├── scheduling/
+│   ├── simulation/
+│   ├── utils/
+│   └── visualization/
+├── tests/
+├── Dockerfile
+├── Makefile
+├── pyproject.toml
+└── README.md
+```
+
+## Installation
+
+### Option A: Local venv
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip==25.0.1
+pip install '.[dev]'
+python scripts/prepare_data.py
+```
+
+### Option B: Docker
+
+```bash
+docker build -t jssp-yafs:latest .
+# smoke
+docker run --rm -v "$PWD/results:/workspace/results" jssp-yafs:latest smoke --config configs/smoke.yaml --progress
+# full
+docker run --rm -v "$PWD/results:/workspace/results" jssp-yafs:latest full --config configs/full.yaml --progress
+```
+
+## Run Commands
+
+Smoke test (fast):
+
+```bash
+jssp-yafs smoke --config configs/smoke.yaml --progress
+```
+
+Full pipeline (experiments + ablations + stats + figures):
+
+```bash
+jssp-yafs full --config configs/full.yaml --progress
+```
+
+Regenerate plots only:
+
+```bash
+jssp-yafs plots --config configs/full.yaml --mode full
+```
+
+Verification:
+
+```bash
+jssp-yafs verify-data --manifest data/manifests/processed_checksums.csv
+pytest
+ruff check src tests scripts
+```
+
+## Outputs
+
+Smoke outputs:
+- `results/runs/smoke/per_run_metrics.csv`
+- `results/runs/smoke/aggregated_metrics.csv`
+- `results/runs/smoke/statistical_tests.csv`
+- `results/runs/smoke/pareto_points.csv`
+- `results/runs/smoke/convergence.csv`
+- `results/runs/smoke/schedule_traces.csv`
+- `results/figures/smoke/*.png`
+- `results/figures/smoke/*.pdf`
+
+Full outputs:
+- same structure under `results/runs/full` and `results/figures/full`
+- compute budget: `results/runs/<mode>/compute_budget.json`
+
+## Method Summary
+
+Simulation-coupled evaluation uses YAFS `Topology` semantics.
+
+For link `e`:
+- `t_tx(e) = bytes / (BW_e * 1e6)`
+- `lat_e = t_tx(e) + PR_e`
+
+For operation `(j,k)` on node `n`:
+- `t_proc(j,k,n) = p_jk / IPT_n`
+
+Energy:
+- `E_comp_active = Σ P_active(n(op)) * t_proc(op)`
+- `E_idle = Σ P_idle(n) * max(0, Cmax - busy_n)`
+- `E_comm = Σ P_tx(e) * t_tx(e)`
+- `E_total = E_comp_active + E_idle + E_comm`
+
+Reliability:
+- `R_node(op) = exp(-λ_node * t_proc(op))`
+- `R_link(e) = exp(-λ_link * lat_e)`
+- `R_schedule = Π_op[R_node(op) * Π_e R_link(e)]`
+
+Objective vector for NSGA-II minimization:
+- `(Cmax, E_total, 1 - R_schedule)`
+
+## Assumptions
+
+Assumptions are explicitly listed in `docs/assumptions.md`.
+
+## Reproducibility and Paper Artifacts
+
+- Reproducibility checklist: `docs/reproducibility_checklist.md`
+- Paper artifacts checklist: `docs/paper_artifacts_checklist.md`
+- Method draft section: `docs/method_draft.md`
+
+## Dataset and License Notes
+
+- Dataset details: `docs/dataset.md`
+- Source corpus file: `data/raw/instance_data.txt`
+- Source license copy: `data/licenses/jsspInstancesAndResults_LICENSE.txt`

@@ -1,0 +1,89 @@
+dataset:
+  source_file: data/raw/instance_data.txt
+  quick_instances: [ft06, la01]
+  full_instances: [ft06, la01, la06, la16, orb05, ta01]
+
+topology:
+  edge:
+    count: 6
+    mips: 120.0
+    p_active: 18.0
+    p_idle: 4.5
+    failure_lambda: 0.020
+  fog:
+    count: 4
+    mips: 340.0
+    p_active: 42.0
+    p_idle: 9.0
+    failure_lambda: 0.010
+  cloud:
+    count: 2
+    mips: 800.0
+    p_active: 95.0
+    p_idle: 22.0
+    failure_lambda: 0.005
+  links:
+    edge-edge:
+      bw_mbps: 120.0
+      prop_delay: 0.001
+      p_tx: 2.4
+      failure_lambda: 0.010
+    fog-fog:
+      bw_mbps: 600.0
+      prop_delay: 0.0008
+      p_tx: 3.2
+      failure_lambda: 0.006
+    cloud-cloud:
+      bw_mbps: 2000.0
+      prop_delay: 0.0005
+      p_tx: 6.0
+      failure_lambda: 0.002
+    edge-fog:
+      bw_mbps: 80.0
+      prop_delay: 0.003
+      p_tx: 3.0
+      failure_lambda: 0.012
+    cloud-fog:
+      bw_mbps: 350.0
+      prop_delay: 0.007
+      p_tx: 4.8
+      failure_lambda: 0.008
+    cloud-edge:
+      bw_mbps: 45.0
+      prop_delay: 0.015
+      p_tx: 5.5
+      failure_lambda: 0.015
+
+evaluation:
+  payload_bytes: 32000
+  source_edge_policy: round_robin
+  communication_weight: 1.0
+  include_idle_energy: true
+
+ga_plain:
+  population_size: 32
+  generations: 45
+  crossover_prob: 0.90
+  mutation_prob: 0.25
+  local_search_prob: 0.0
+  tournament_k: 2
+  crossover_ops: [uniform, two_point, job_preserving]
+  mutation_ops: [swap, insert, scramble, reassign_map]
+
+ga_enhanced:
+  population_size: 44
+  generations: 60
+  crossover_prob: 0.93
+  mutation_prob: 0.30
+  local_search_prob: 0.18
+  tournament_k: 2
+  crossover_ops: [uniform, two_point, job_preserving]
+  mutation_ops: [swap, insert, scramble, reassign_map]
+
+run:
+  output_dir: results
+  cache_dir: results/cache
+  random_seeds: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+  quick_random_seeds: [2, 3, 5]
+  algorithms: [heuristic_spt, heuristic_mwr, plain_ga, enhanced_ga]
+  ablations: []
