@@ -14,15 +14,53 @@ from tqdm import tqdm
 from jssp_yafs.config import ExperimentConfig, GAConfig
 from jssp_yafs.data.benchmarks import BEST_KNOWN_MAKESPAN
 from jssp_yafs.data.loader import load_instances_from_folder
+from jssp_yafs.data.models import JSSPInstance
 from jssp_yafs.experiments.aggregation import aggregate_metrics
 from jssp_yafs.experiments.statistics import run_statistics
 from jssp_yafs.moea.indicators import build_ref_point, hypervolume, igd, non_dominated_front
 from jssp_yafs.moea.nsga2 import NSGA2Result, run_nsga2
 from jssp_yafs.scheduling.heuristics import heuristic_machine_map, priority_sequence
-from jssp_yafs.simulation.edge_topology import build_edge_fog_cloud_topology
+from jssp_yafs.simulation.edge_topology import EdgeTopology, build_edge_fog_cloud_topology
 from jssp_yafs.simulation.yafs_simulator import SimulationResult, YAFSScheduleSimulator
 
 logger = logging.getLogger(__name__)
+
+# ── Worker-process globals (set once by _init_worker, reused across tasks) ──
+_worker_instances: dict[str, JSSPInstance] = {}
+_worker_topology: EdgeTopology | None = None
+_worker_simulator: YAFSScheduleSimulator | None = None
+_worker_cfg: ExperimentConfig | None = None
+_worker_compute_nodes: list[int] = []
+_worker_node_mips: dict[int, float] = {}
+
+
+def _init_worker(
+    cfg: ExperimentConfig,
+    split_name: str,
+    instances_names: list[str],
+) -> None:
+    """Called once per worker process by ProcessPoolExecutor.
+
+    Loads instances from disk, builds the topology, and creates a simulator
+    whose _path_cache will persist across all tasks assigned to this worker.
+    """
+    global _worker_instances, _worker_topology, _worker_simulator
+    global _worker_cfg, _worker_compute_nodes, _worker_node_mips
+
+    _worker_cfg = cfg
+    _worker_instances = load_instances_from_folder(
+        Path("data/processed") / split_name, instances_names
+    )
+    _worker_topology = build_edge_fog_cloud_topology(cfg.topology)
+    _worker_compute_nodes = _worker_topology.compute_nodes
+    _worker_node_mips = {
+        n: float(_worker_topology.topology.G.nodes[n]["IPT"])
+        for n in _worker_compute_nodes
+    }
+    _worker_simulator = YAFSScheduleSimulator(
+        _worker_topology, cfg.evaluation
+    )
+
 
 
 @dataclass(slots=True)
@@ -168,28 +206,24 @@ def _run_algorithm(
 
 
 
-def _run_one(task: dict) -> dict:
+def _run_one(task: tuple[int, str, str]) -> dict:
     """Worker for one (seed, instance, algorithm) run.
 
-    Each worker builds its own topology and simulator so it's safe for
-    multiprocessing (no shared SQLite connections).
+    Relies on module-level globals set once by _init_worker:
+      _worker_instances, _worker_topology, _worker_simulator,
+      _worker_cfg, _worker_compute_nodes, _worker_node_mips
     """
-    seed = task["seed"]
-    instance_name = task["instance_name"]
-    algorithm = task["algorithm"]
-    cfg: ExperimentConfig = task["cfg"]
-    split_name = task["split_name"]
-    instances_names = task["instances_names"]
+    seed, instance_name, algorithm = task
 
-    instances = load_instances_from_folder(
-        Path("data/processed") / split_name,
-        instances_names,
-    )
-    instance = instances[instance_name]
+    cfg = _worker_cfg
+    assert cfg is not None
+    simulator = _worker_simulator
+    assert simulator is not None
+    instance = _worker_instances[instance_name]
 
-    edge_topology = build_edge_fog_cloud_topology(cfg.topology)
-    node_mips = {n: float(edge_topology.topology.G.nodes[n]["IPT"]) for n in edge_topology.compute_nodes}
-    simulator = YAFSScheduleSimulator(edge_topology, cfg.evaluation, cfg.run.cache_dir)
+    # Clear eval cache from the previous task to bound memory, but keep
+    # _path_cache (topology-dependent shortest paths, only ~144 entries).
+    simulator._eval_cache.clear()
 
     rng = np.random.default_rng(seed)
     sims, history, evals, runtime_sec, decisions = _run_algorithm(
@@ -198,8 +232,8 @@ def _run_one(task: dict) -> dict:
         simulator=simulator,
         ga_plain=cfg.ga_plain,
         ga_enhanced=cfg.ga_enhanced,
-        compute_nodes=edge_topology.compute_nodes,
-        node_mips=node_mips,
+        compute_nodes=_worker_compute_nodes,
+        node_mips=_worker_node_mips,
         rng=rng,
         show_progress=False,
     )
@@ -212,8 +246,6 @@ def _run_one(task: dict) -> dict:
         best_seq, best_map = decisions[best_idx]
         best_full = simulator.evaluate(instance, best_seq, best_map, with_traces=True)
         best_traces = best_full.traces
-
-    simulator.close()
 
     bks = BEST_KNOWN_MAKESPAN.get(instance_name)
 
@@ -322,21 +354,13 @@ def run_experiments(
     if include_ablations:
         algorithms.extend(cfg.run.ablations)
 
-    # Build task list: one entry per (seed, instance, algorithm).
-    tasks: list[dict] = []
-    for seed in seeds:
-        for instance_name in instances_names:
-            for algorithm in algorithms:
-                tasks.append(
-                    {
-                        "seed": seed,
-                        "instance_name": instance_name,
-                        "algorithm": algorithm,
-                        "cfg": cfg,
-                        "split_name": split_name,
-                        "instances_names": instances_names,
-                    }
-                )
+    # Build task list: one lightweight tuple per (seed, instance, algorithm).
+    tasks: list[tuple[int, str, str]] = [
+        (seed, instance_name, algorithm)
+        for seed in seeds
+        for instance_name in instances_names
+        for algorithm in algorithms
+    ]
 
     n_workers = max_workers if max_workers is not None else os.cpu_count() or 1
     n_workers = max(1, min(n_workers, len(tasks)))
@@ -359,7 +383,8 @@ def run_experiments(
     indicator_rows: list[dict] = []
 
     if n_workers <= 1:
-        # Sequential fallback: avoids multiprocessing overhead for small runs.
+        # Sequential fallback: initialize once in this process.
+        _init_worker(cfg, split_name, instances_names)
         iterator = tasks
         if show_progress:
             iterator = tqdm(iterator, desc="Experiments", unit="run")
@@ -371,7 +396,11 @@ def run_experiments(
             conv_rows.extend(result["convergence"])
             schedule_rows.extend(result["schedule"])
     else:
-        with ProcessPoolExecutor(max_workers=n_workers) as pool:
+        with ProcessPoolExecutor(
+            max_workers=n_workers,
+            initializer=_init_worker,
+            initargs=(cfg, split_name, instances_names),
+        ) as pool:
             futures = {pool.submit(_run_one, task): task for task in tasks}
             completed_iter = as_completed(futures)
             if show_progress:
