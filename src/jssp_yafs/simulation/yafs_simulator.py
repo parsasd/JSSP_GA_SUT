@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import hashlib
-import json
 import math
-import shutil
-import sqlite3
-from dataclasses import asdict, dataclass
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any
 
 import networkx as nx
 import numpy as np
-from diskcache import Cache
 
 from jssp_yafs.config import EvalConfig
 from jssp_yafs.data.models import JSSPInstance
@@ -49,26 +43,20 @@ class YAFSScheduleSimulator:
         self,
         edge_topology: EdgeTopology,
         eval_cfg: EvalConfig,
-        cache_dir: str | Path,
+        cache_dir: str | Path = "",
         cache_traces: bool = False,
     ) -> None:
         self.edge_topology = edge_topology
         self.eval_cfg = eval_cfg
-        self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.cache = Cache(str(self.cache_dir))
         self.cache_traces = cache_traces
         self._path_cache: dict[tuple[int, int, int], tuple[float, float, float, list[int]]] = {}
+        self._eval_cache: dict[int, dict[str, Any]] = {}
 
     def close(self) -> None:
-        self.cache.close()
+        self._eval_cache.clear()
 
     def _reset_cache(self) -> None:
-        self.cache.close()
-        if self.cache_dir.exists():
-            shutil.rmtree(self.cache_dir)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.cache = Cache(str(self.cache_dir))
+        self._eval_cache.clear()
 
     def _source_node(self, job: int) -> int:
         # Deterministic source edge placement per job.
@@ -112,16 +100,8 @@ class YAFSScheduleSimulator:
         instance: JSSPInstance,
         sequence: np.ndarray,
         machine_map: np.ndarray,
-    ) -> str:
-        payload = {
-            "instance": instance.name,
-            "sequence": sequence.tolist(),
-            "machine_map": machine_map.tolist(),
-            "payload_bytes": self.eval_cfg.payload_bytes,
-            "idle_energy": self.eval_cfg.include_idle_energy,
-        }
-        digest = hashlib.sha1(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
-        return digest
+    ) -> int:
+        return hash((instance.name, sequence.data.tobytes(), machine_map.data.tobytes()))
 
     def evaluate(
         self,
@@ -131,11 +111,7 @@ class YAFSScheduleSimulator:
         with_traces: bool = True,
     ) -> SimulationResult:
         cache_key = self._cache_key(instance, sequence, machine_map)
-        try:
-            cached: dict[str, Any] | None = self.cache.get(cache_key)
-        except sqlite3.DatabaseError:
-            self._reset_cache()
-            cached = None
+        cached: dict[str, Any] | None = self._eval_cache.get(cache_key)
 
         if cached is not None:
             if with_traces and "traces" not in cached:
@@ -239,12 +215,9 @@ class YAFSScheduleSimulator:
             "log_reliability": float(log_reliability),
         }
         if self.cache_traces and with_traces:
+            from dataclasses import asdict
             payload["traces"] = [asdict(t) for t in traces]
-        try:
-            self.cache[cache_key] = payload
-        except sqlite3.DatabaseError:
-            self._reset_cache()
-            self.cache[cache_key] = payload
+        self._eval_cache[cache_key] = payload
 
         return SimulationResult(
             makespan=makespan,

@@ -83,7 +83,7 @@ ga_enhanced:
 run:
   output_dir: results
   cache_dir: results/cache
-  random_seeds: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71]
+  random_seeds: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
   quick_random_seeds: [2, 3, 5]
   algorithms: [heuristic_spt, heuristic_mwr, plain_ga, enhanced_ga]
   ablations: [ablation_no_aos, ablation_no_local_search, ablation_no_smart_init]
