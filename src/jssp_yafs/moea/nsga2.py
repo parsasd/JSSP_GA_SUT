@@ -122,9 +122,21 @@ def _evaluate(
 
 
 
-def _scalar_score(ind: Individual) -> float:
-    # Mildly reliability-aware scalar score for local search decisions.
-    return ind.objectives[0] + 0.1 * ind.objectives[1] + 100.0 * ind.objectives[2]
+def _normalized_scalar_score(
+    ind: Individual,
+    obj_min: np.ndarray,
+    obj_range: np.ndarray,
+) -> float:
+    """Scalar score with objectives normalized to [0, 1] using population bounds.
+
+    Equal weights after normalization avoids the previous bias where arbitrary
+    raw-scale weights (1.0 / 0.1 / 100.0) dominated the local search direction.
+    """
+    score = 0.0
+    for k in range(3):
+        r = obj_range[k] if obj_range[k] > 1e-12 else 1.0
+        score += (ind.objectives[k] - obj_min[k]) / r
+    return score
 
 
 
@@ -134,10 +146,16 @@ def _local_search(
     instance: JSSPInstance,
     compute_nodes: list[int],
     rng: np.random.Generator,
+    pop: list[Individual],
     tries: int = 6,
 ) -> tuple[Individual, int]:
     best = base
     evals = 0
+
+    # Compute normalization bounds from the current population.
+    obj_arr = np.array([ind.objectives for ind in pop], dtype=np.float64)
+    obj_min = obj_arr.min(axis=0)
+    obj_range = obj_arr.max(axis=0) - obj_min
 
     for _ in range(tries):
         seq = best.chromosome.sequence.copy()
@@ -153,7 +171,10 @@ def _local_search(
         cand = _evaluate(simulator, instance, Chromosome(seq, mmap))
         evals += 1
 
-        if dominates(cand.objectives, best.objectives) or _scalar_score(cand) < _scalar_score(best):
+        if dominates(cand.objectives, best.objectives) or (
+            _normalized_scalar_score(cand, obj_min, obj_range)
+            < _normalized_scalar_score(best, obj_min, obj_range)
+        ):
             best = cand
 
     return best, evals
@@ -219,6 +240,12 @@ def run_nsga2(
 
     history: list[dict[str, float]] = []
 
+    # Fixed reference point for convergence tracking, computed once from
+    # the initial population.  Updated only when the worst bounds expand
+    # so the HV values remain comparable across generations.
+    init_objs = np.array([ind.objectives for ind in pop], dtype=np.float64)
+    tracking_ref = build_ref_point(init_objs, margin=0.1)
+
     iterator = range(cfg.generations)
     if show_progress:
         iterator = tqdm(iterator, desc=f"NSGA-II {instance.name}", leave=False)
@@ -272,6 +299,7 @@ def run_nsga2(
                     instance,
                     compute_nodes,
                     rng,
+                    pop,
                 )
                 evals += extra_evals
 
@@ -305,8 +333,11 @@ def run_nsga2(
         pop = next_pop
 
         objectives = np.array([ind.objectives for ind in pop], dtype=np.float64)
-        ref = build_ref_point(objectives)
-        hv = hypervolume(objectives, ref)
+        # Expand tracking reference if population has worse points than
+        # the initial reference (should be rare after generation 0).
+        cur_worst = objectives.max(axis=0)
+        tracking_ref = np.maximum(tracking_ref, cur_worst * 1.1 + 1e-12)
+        hv = hypervolume(objectives, tracking_ref)
         best_mk = float(objectives[:, 0].min())
         best_en = float(objectives[:, 1].min())
         best_rl = float((1.0 - objectives[:, 2]).max())

@@ -67,7 +67,7 @@ ga_plain:
   mutation_prob: 0.25
   local_search_prob: 0.0
   tournament_k: 2
-  crossover_ops: [uniform, two_point, job_preserving]
+  crossover_ops: [jox, ppx, job_preserving]
   mutation_ops: [swap, insert, scramble, reassign_map]
 
 ga_enhanced:
@@ -77,7 +77,7 @@ ga_enhanced:
   mutation_prob: 0.30
   local_search_prob: 0.18
   tournament_k: 2
-  crossover_ops: [uniform, two_point, job_preserving]
+  crossover_ops: [jox, ppx, job_preserving]
   mutation_ops: [swap, insert, scramble, reassign_map]
 
 run:

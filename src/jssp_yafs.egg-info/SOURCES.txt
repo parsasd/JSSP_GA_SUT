@@ -11,6 +11,7 @@ src/jssp_yafs.egg-info/entry_points.txt
 src/jssp_yafs.egg-info/requires.txt
 src/jssp_yafs.egg-info/top_level.txt
 src/jssp_yafs/data/__init__.py
+src/jssp_yafs/data/benchmarks.py
 src/jssp_yafs/data/loader.py
 src/jssp_yafs/data/models.py
 src/jssp_yafs/data/prepare.py
@@ -38,4 +39,5 @@ src/jssp_yafs/visualization/__init__.py
 src/jssp_yafs/visualization/plots.py
 tests/test_dataset.py
 tests/test_encoding.py
+tests/test_indicators.py
 tests/test_objectives.py

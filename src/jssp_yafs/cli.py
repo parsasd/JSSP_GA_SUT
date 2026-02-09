@@ -28,12 +28,19 @@ def _prepare_data(cfg: ExperimentConfig) -> None:
 
 
 
-def _run_and_plot(cfg: ExperimentConfig, mode: str, include_ablations: bool, progress: bool) -> RunnerOutput:
+def _run_and_plot(
+    cfg: ExperimentConfig,
+    mode: str,
+    include_ablations: bool,
+    progress: bool,
+    max_workers: int | None = None,
+) -> RunnerOutput:
     output = run_experiments(
         cfg=cfg,
         instance_mode=mode,
         include_ablations=include_ablations,
         show_progress=progress,
+        max_workers=max_workers,
     )
     fig_root = plot_all(cfg, output.run_root, mode=mode)
     logger.info("Figures written to %s", fig_root)
@@ -62,7 +69,7 @@ def _cmd_smoke(args: argparse.Namespace) -> int:
     cfg = load_config(args.config)
     setup_logging(cfg.run.output_dir / "pipeline_smoke.log")
     _prepare_data(cfg)
-    output = _run_and_plot(cfg, mode="smoke", include_ablations=False, progress=args.progress)
+    output = _run_and_plot(cfg, mode="smoke", include_ablations=False, progress=args.progress, max_workers=args.workers)
     summary = pd.read_csv(output.aggregate_csv)
     logger.info("Smoke run complete. Aggregated rows=%d", len(summary))
     return 0
@@ -80,6 +87,7 @@ def _cmd_full(args: argparse.Namespace) -> int:
         mode="full",
         include_ablations=not args.no_ablations,
         progress=args.progress,
+        max_workers=args.workers,
     )
     summary = pd.read_csv(output.aggregate_csv)
     logger.info("Full run complete. Aggregated rows=%d", len(summary))
@@ -108,6 +116,7 @@ def _cmd_all(args: argparse.Namespace) -> int:
         mode="full",
         include_ablations=not args.no_ablations,
         progress=args.progress,
+        max_workers=args.workers,
     )
     return 0
 
@@ -128,6 +137,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_smoke = sub.add_parser("smoke", help="Run smoke experiment pipeline")
     p_smoke.add_argument("--config", default="configs/smoke.yaml")
     p_smoke.add_argument("--progress", action="store_true")
+    p_smoke.add_argument("--workers", type=int, default=None, help="Parallel workers (default: CPU count)")
     p_smoke.set_defaults(func=_cmd_smoke)
 
     p_full = sub.add_parser("full", help="Run full experiment pipeline")
@@ -135,6 +145,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_full.add_argument("--progress", action="store_true")
     p_full.add_argument("--no-ablations", action="store_true")
     p_full.add_argument("--max-seeds", type=int, default=None)
+    p_full.add_argument("--workers", type=int, default=None, help="Parallel workers (default: CPU count)")
     p_full.set_defaults(func=_cmd_full)
 
     p_plots = sub.add_parser("plots", help="Regenerate plots from existing run outputs")
@@ -147,6 +158,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--progress", action="store_true")
     p_all.add_argument("--no-ablations", action="store_true")
     p_all.add_argument("--max-seeds", type=int, default=None)
+    p_all.add_argument("--workers", type=int, default=None, help="Parallel workers (default: CPU count)")
     p_all.set_defaults(func=_cmd_all)
 
     return p

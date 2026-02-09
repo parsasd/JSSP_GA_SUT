@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 
@@ -33,6 +34,11 @@ def aggregate_metrics(per_run_csv: str | Path, out_csv: str | Path) -> pd.DataFr
             row[f"{col}_mean"] = mean
             row[f"{col}_std"] = std
             row[f"{col}_ci95"] = ci95
+
+        # Include BKS reference if available in the data.
+        if "bks_makespan" in g.columns:
+            bks = g["bks_makespan"].iloc[0]
+            row["bks_makespan"] = bks if not (isinstance(bks, float) and np.isnan(bks)) else np.nan
         rows.append(row)
 
     out = pd.DataFrame(rows).sort_values(["instance", "algorithm"]).reset_index(drop=True)

@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from jssp_yafs.config import ExperimentConfig, GAConfig
+from jssp_yafs.data.benchmarks import BEST_KNOWN_MAKESPAN
 from jssp_yafs.data.loader import load_instances_from_folder
 from jssp_yafs.experiments.aggregation import aggregate_metrics
 from jssp_yafs.experiments.statistics import run_statistics
@@ -164,11 +168,136 @@ def _run_algorithm(
 
 
 
+def _run_one(task: dict) -> dict:
+    """Worker for one (seed, instance, algorithm) run.
+
+    Each worker builds its own topology and simulator so it's safe for
+    multiprocessing (no shared SQLite connections).
+    """
+    seed = task["seed"]
+    instance_name = task["instance_name"]
+    algorithm = task["algorithm"]
+    cfg: ExperimentConfig = task["cfg"]
+    split_name = task["split_name"]
+    instances_names = task["instances_names"]
+
+    instances = load_instances_from_folder(
+        Path("data/processed") / split_name,
+        instances_names,
+    )
+    instance = instances[instance_name]
+
+    edge_topology = build_edge_fog_cloud_topology(cfg.topology)
+    node_mips = {n: float(edge_topology.topology.G.nodes[n]["IPT"]) for n in edge_topology.compute_nodes}
+    simulator = YAFSScheduleSimulator(edge_topology, cfg.evaluation, cfg.run.cache_dir)
+
+    rng = np.random.default_rng(seed)
+    sims, history, evals, runtime_sec, decisions = _run_algorithm(
+        algorithm=algorithm,
+        instance=instance,
+        simulator=simulator,
+        ga_plain=cfg.ga_plain,
+        ga_enhanced=cfg.ga_enhanced,
+        compute_nodes=edge_topology.compute_nodes,
+        node_mips=node_mips,
+        rng=rng,
+        show_progress=False,
+    )
+
+    objs = np.array([s.objective_vector for s in sims], dtype=np.float64)
+    best_idx = _best_compromise(objs)
+    best = sims[best_idx]
+    best_traces = best.traces
+    if not best_traces:
+        best_seq, best_map = decisions[best_idx]
+        best_full = simulator.evaluate(instance, best_seq, best_map, with_traces=True)
+        best_traces = best_full.traces
+
+    simulator.close()
+
+    bks = BEST_KNOWN_MAKESPAN.get(instance_name)
+
+    per_run = {
+        "instance": instance_name,
+        "seed": seed,
+        "algorithm": algorithm,
+        "hypervolume": np.nan,
+        "igd": np.nan,
+        "best_makespan": best.makespan,
+        "best_energy": best.energy,
+        "best_reliability": best.reliability,
+        "bks_makespan": bks if bks is not None else np.nan,
+        "runtime_sec": runtime_sec,
+        "evaluations": evals,
+    }
+
+    budget = {
+        "instance": instance_name,
+        "seed": seed,
+        "algorithm": algorithm,
+        "population_size": (
+            cfg.ga_plain.population_size if algorithm == "plain_ga" else cfg.ga_enhanced.population_size
+        ),
+        "generations": (
+            cfg.ga_plain.generations if algorithm == "plain_ga" else cfg.ga_enhanced.generations
+        ),
+        "evaluations": evals,
+        "runtime_sec": runtime_sec,
+    }
+
+    pareto_list = [
+        {
+            "instance": instance_name,
+            "seed": seed,
+            "algorithm": algorithm,
+            "point_id": i,
+            "makespan": s.makespan,
+            "energy": s.energy,
+            "reliability": s.reliability,
+            "one_minus_reliability": 1.0 - s.reliability,
+        }
+        for i, s in enumerate(sims)
+    ]
+
+    conv_list = [
+        {"instance": instance_name, "seed": seed, "algorithm": algorithm, **row}
+        for row in history
+    ]
+
+    schedule_list = [
+        {
+            "instance": instance_name,
+            "seed": seed,
+            "algorithm": algorithm,
+            "job": tr.job,
+            "operation": tr.operation,
+            "machine": tr.machine,
+            "node": tr.node,
+            "predecessor_node": tr.predecessor_node,
+            "start": tr.start,
+            "end": tr.end,
+            "processing_time": tr.processing_time,
+            "comm_time": tr.comm_time,
+        }
+        for tr in best_traces
+    ]
+
+    return {
+        "per_run": per_run,
+        "budget": budget,
+        "pareto": pareto_list,
+        "convergence": conv_list,
+        "schedule": schedule_list,
+    }
+
+
+
 def run_experiments(
     cfg: ExperimentConfig,
     instance_mode: str,
     include_ablations: bool,
     show_progress: bool,
+    max_workers: int | None = None,
 ) -> RunnerOutput:
     output_root = cfg.run.output_dir
     run_root = output_root / "runs" / ("full" if instance_mode == "full" else "smoke")
@@ -189,142 +318,76 @@ def run_experiments(
     )
     seeds = cfg.run.random_seeds if instance_mode == "full" else cfg.run.quick_random_seeds
 
-    instances = load_instances_from_folder(
-        Path("data/processed") / split_name,
-        instances_names,
-    )
-
-    edge_topology = build_edge_fog_cloud_topology(cfg.topology)
-    node_mips = {n: float(edge_topology.topology.G.nodes[n]["IPT"]) for n in edge_topology.compute_nodes}
-    simulator = YAFSScheduleSimulator(edge_topology, cfg.evaluation, cfg.run.cache_dir)
-
     algorithms = list(cfg.run.algorithms)
     if include_ablations:
         algorithms.extend(cfg.run.ablations)
 
-    per_run_rows: list[dict[str, float | int | str]] = []
-    pareto_rows: list[dict[str, float | int | str]] = []
-    conv_rows: list[dict[str, float | int | str]] = []
-    schedule_rows: list[dict[str, float | int | str]] = []
-    indicator_rows: list[dict[str, float | int | str]] = []
-    budget_rows: list[dict[str, float | int | str]] = []
+    # Build task list: one entry per (seed, instance, algorithm).
+    tasks: list[dict] = []
+    for seed in seeds:
+        for instance_name in instances_names:
+            for algorithm in algorithms:
+                tasks.append(
+                    {
+                        "seed": seed,
+                        "instance_name": instance_name,
+                        "algorithm": algorithm,
+                        "cfg": cfg,
+                        "split_name": split_name,
+                        "instances_names": instances_names,
+                    }
+                )
+
+    n_workers = max_workers if max_workers is not None else os.cpu_count() or 1
+    n_workers = max(1, min(n_workers, len(tasks)))
 
     logger.info(
-        "Running %s experiments: instances=%s seeds=%s algorithms=%s",
+        "Running %s experiments: instances=%s seeds=%s algorithms=%s workers=%d tasks=%d",
         instance_mode,
         instances_names,
         seeds,
         algorithms,
+        n_workers,
+        len(tasks),
     )
 
-    for seed in seeds:
-        for instance_name in instances_names:
-            instance = instances[instance_name]
+    per_run_rows: list[dict] = []
+    pareto_rows: list[dict] = []
+    conv_rows: list[dict] = []
+    schedule_rows: list[dict] = []
+    budget_rows: list[dict] = []
+    indicator_rows: list[dict] = []
 
-            for algorithm in algorithms:
-                rng = np.random.default_rng(seed)
-                sims, history, evals, runtime_sec, decisions = _run_algorithm(
-                    algorithm=algorithm,
-                    instance=instance,
-                    simulator=simulator,
-                    ga_plain=cfg.ga_plain,
-                    ga_enhanced=cfg.ga_enhanced,
-                    compute_nodes=edge_topology.compute_nodes,
-                    node_mips=node_mips,
-                    rng=rng,
-                    show_progress=show_progress,
+    if n_workers <= 1:
+        # Sequential fallback: avoids multiprocessing overhead for small runs.
+        iterator = tasks
+        if show_progress:
+            iterator = tqdm(iterator, desc="Experiments", unit="run")
+        for task in iterator:
+            result = _run_one(task)
+            per_run_rows.append(result["per_run"])
+            budget_rows.append(result["budget"])
+            pareto_rows.extend(result["pareto"])
+            conv_rows.extend(result["convergence"])
+            schedule_rows.extend(result["schedule"])
+    else:
+        with ProcessPoolExecutor(max_workers=n_workers) as pool:
+            futures = {pool.submit(_run_one, task): task for task in tasks}
+            completed_iter = as_completed(futures)
+            if show_progress:
+                completed_iter = tqdm(
+                    completed_iter,
+                    total=len(futures),
+                    desc=f"Experiments ({n_workers} workers)",
+                    unit="run",
                 )
-
-                objs = np.array([s.objective_vector for s in sims], dtype=np.float64)
-                best_idx = _best_compromise(objs)
-                best = sims[best_idx]
-                best_traces = best.traces
-                if not best_traces:
-                    best_seq, best_map = decisions[best_idx]
-                    best_full = simulator.evaluate(
-                        instance,
-                        best_seq,
-                        best_map,
-                        with_traces=True,
-                    )
-                    best_traces = best_full.traces
-
-                per_run_rows.append(
-                    {
-                        "instance": instance_name,
-                        "seed": seed,
-                        "algorithm": algorithm,
-                        # Filled after all runs using a shared per-instance reference point.
-                        "hypervolume": np.nan,
-                        # Inverted generational distance to shared empirical reference front.
-                        "igd": np.nan,
-                        "best_makespan": best.makespan,
-                        "best_energy": best.energy,
-                        "best_reliability": best.reliability,
-                        "runtime_sec": runtime_sec,
-                        "evaluations": evals,
-                    }
-                )
-
-                budget_rows.append(
-                    {
-                        "instance": instance_name,
-                        "seed": seed,
-                        "algorithm": algorithm,
-                        "population_size": (
-                            cfg.ga_plain.population_size
-                            if algorithm == "plain_ga"
-                            else cfg.ga_enhanced.population_size
-                        ),
-                        "generations": (
-                            cfg.ga_plain.generations if algorithm == "plain_ga" else cfg.ga_enhanced.generations
-                        ),
-                        "evaluations": evals,
-                        "runtime_sec": runtime_sec,
-                    }
-                )
-
-                for point_idx, sim in enumerate(sims):
-                    pareto_rows.append(
-                        {
-                            "instance": instance_name,
-                            "seed": seed,
-                            "algorithm": algorithm,
-                            "point_id": point_idx,
-                            "makespan": sim.makespan,
-                            "energy": sim.energy,
-                            "reliability": sim.reliability,
-                            "one_minus_reliability": 1.0 - sim.reliability,
-                        }
-                    )
-
-                for row in history:
-                    conv_rows.append(
-                        {
-                            "instance": instance_name,
-                            "seed": seed,
-                            "algorithm": algorithm,
-                            **row,
-                        }
-                    )
-
-                for tr in best_traces:
-                    schedule_rows.append(
-                        {
-                            "instance": instance_name,
-                            "seed": seed,
-                            "algorithm": algorithm,
-                            "job": tr.job,
-                            "operation": tr.operation,
-                            "machine": tr.machine,
-                            "node": tr.node,
-                            "predecessor_node": tr.predecessor_node,
-                            "start": tr.start,
-                            "end": tr.end,
-                            "processing_time": tr.processing_time,
-                            "comm_time": tr.comm_time,
-                        }
-                    )
+            for future in completed_iter:
+                result = future.result()
+                per_run_rows.append(result["per_run"])
+                budget_rows.append(result["budget"])
+                pareto_rows.extend(result["pareto"])
+                conv_rows.extend(result["convergence"])
+                schedule_rows.extend(result["schedule"])
 
     per_run_df = pd.DataFrame(per_run_rows)
     pareto_df = pd.DataFrame(pareto_rows)
@@ -378,8 +441,6 @@ def run_experiments(
         "rows": budget_rows,
     }
     budget_json.write_text(json.dumps(budget_payload, indent=2), encoding="utf-8")
-
-    simulator.close()
 
     return RunnerOutput(
         run_root=run_root,

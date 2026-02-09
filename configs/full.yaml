@@ -1,7 +1,7 @@
 dataset:
   source_file: data/raw/instance_data.txt
   quick_instances: [ft06, la01]
-  full_instances: [ft06, la01, la06, la16, orb05, ta01]
+  full_instances: [ft06, la01, la06, la11, la16, la21, la26, orb05, abz5, abz7, ta01, ta11, ta21, swv01, yn1]
 
 topology:
   edge:
@@ -61,23 +61,23 @@ evaluation:
   include_idle_energy: true
 
 ga_plain:
-  population_size: 48
-  generations: 70
+  population_size: 100
+  generations: 300
   crossover_prob: 0.90
   mutation_prob: 0.25
   local_search_prob: 0.0
   tournament_k: 2
-  crossover_ops: [uniform, two_point, job_preserving]
+  crossover_ops: [jox, ppx, job_preserving]
   mutation_ops: [swap, insert, scramble, reassign_map]
 
 ga_enhanced:
-  population_size: 64
-  generations: 95
+  population_size: 100
+  generations: 400
   crossover_prob: 0.93
   mutation_prob: 0.32
   local_search_prob: 0.30
   tournament_k: 2
-  crossover_ops: [uniform, two_point, job_preserving]
+  crossover_ops: [jox, ppx, job_preserving]
   mutation_ops: [swap, insert, scramble, reassign_map]
 
 run:

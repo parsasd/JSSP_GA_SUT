@@ -43,6 +43,7 @@ Baselines and studies:
 - Classic heuristics: `heuristic_spt`, `heuristic_mwr`
 - Ablations: `ablation_no_aos`, `ablation_no_local_search`, `ablation_no_smart_init`
 - Statistical testing: Friedman + pairwise Wilcoxon + Holm correction
+- Indicators: shared-reference hypervolume (HV) and IGD per instance
 
 ## Repository Tree
 
@@ -98,6 +99,12 @@ docker run --rm -v "$PWD/results:/workspace/results" jssp-yafs:latest smoke --co
 docker run --rm -v "$PWD/results:/workspace/results" jssp-yafs:latest full --config configs/full.yaml --progress
 ```
 
+If you are iterating on the simulator or cache format, prefer a fresh image build:
+
+```bash
+docker build --no-cache -t jssp-yafs:latest .
+```
+
 ## Run Commands
 
 Smoke test (fast):
@@ -110,6 +117,22 @@ Full pipeline (experiments + ablations + stats + figures):
 
 ```bash
 jssp-yafs full --config configs/full.yaml --progress
+```
+
+Faster full-mode variants (same 6 benchmarks, reduced compute):
+
+```bash
+# Disable ablations (largest runtime reduction)
+jssp-yafs full --config configs/full.yaml --no-ablations
+
+# Limit to first N seeds from run.random_seeds
+jssp-yafs full --config configs/full.yaml --max-seeds 10
+
+# Combine both for quick iteration
+jssp-yafs full --config configs/full.yaml --max-seeds 8 --no-ablations
+
+# Pre-tuned faster config (10 seeds, no ablations, smaller GA budget)
+jssp-yafs full --config configs/full_fast.yaml
 ```
 
 Regenerate plots only:
@@ -126,6 +149,26 @@ pytest
 ruff check src tests scripts
 ```
 
+## Docker Troubleshooting
+
+Symptom:
+
+```text
+KeyError: 'traces'
+```
+
+Cause:
+- old Docker image code + stale cache entries in `results/cache` from a newer cache schema.
+
+Recovery:
+
+```bash
+docker build --no-cache -t jssp-yafs:latest .
+rm -rf results/cache
+docker run --rm -v "$PWD/results:/workspace/results" \
+  jssp-yafs:latest full --config configs/full.yaml
+```
+
 ## Outputs
 
 Smoke outputs:
@@ -133,6 +176,7 @@ Smoke outputs:
 - `results/runs/smoke/aggregated_metrics.csv`
 - `results/runs/smoke/statistical_tests.csv`
 - `results/runs/smoke/pareto_points.csv`
+- `results/runs/smoke/indicator_reference.csv`
 - `results/runs/smoke/convergence.csv`
 - `results/runs/smoke/schedule_traces.csv`
 - `results/figures/smoke/*.png`
@@ -141,6 +185,7 @@ Smoke outputs:
 Full outputs:
 - same structure under `results/runs/full` and `results/figures/full`
 - compute budget: `results/runs/<mode>/compute_budget.json`
+- per-instance shared indicator references: `results/runs/<mode>/indicator_reference.csv`
 
 ## Method Summary
 

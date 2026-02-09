@@ -82,6 +82,112 @@ def crossover_job_preserving(
 
 
 
+def crossover_jox(
+    a_seq: np.ndarray,
+    b_seq: np.ndarray,
+    a_map: np.ndarray,
+    b_map: np.ndarray,
+    instance: JSSPInstance,
+    compute_nodes: list[int],
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Job Order Crossover (JOX) for operation-based JSSP encoding.
+
+    Selects a random subset of jobs.  Operations belonging to the selected
+    jobs keep their positions from parent A.  The remaining positions are
+    filled, in order, by scanning parent B and taking only operations of
+    the non-selected jobs.  This preserves the relative ordering inherited
+    from each parent and guarantees each job appears exactly n_machines
+    times, so no repair is needed for the sequence.
+    """
+    n_jobs = instance.n_jobs
+    n_select = max(1, n_jobs // 2)
+    selected_jobs = set(
+        rng.choice(np.arange(n_jobs), size=n_select, replace=False).tolist()
+    )
+
+    child_seq = np.full_like(a_seq, fill_value=-1)
+
+    # Keep selected-job genes at their positions from parent A.
+    keep_mask = np.array([int(g) in selected_jobs for g in a_seq], dtype=bool)
+    child_seq[keep_mask] = a_seq[keep_mask]
+
+    # Fill remaining positions from parent B, preserving B's order for
+    # the non-selected jobs.
+    fill_vals = [g for g in b_seq.tolist() if int(g) not in selected_jobs]
+    fill_idx = np.where(~keep_mask)[0]
+    child_seq[fill_idx] = np.array(fill_vals, dtype=np.int64)
+
+    # Machine map: uniform crossover.
+    mask_map = rng.random(len(a_map)) < 0.5
+    child_map = np.where(mask_map, a_map, b_map)
+    child_map = repair_machine_map(child_map, compute_nodes, rng)
+
+    return child_seq, child_map
+
+
+
+def crossover_ppx(
+    a_seq: np.ndarray,
+    b_seq: np.ndarray,
+    a_map: np.ndarray,
+    b_map: np.ndarray,
+    instance: JSSPInstance,
+    compute_nodes: list[int],
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Precedence Preserving Crossover (PPX) for operation-based JSSP encoding.
+
+    For each position in the child, a random binary mask decides whether
+    the next gene is taken from parent A or parent B.  Genes are consumed
+    from each parent in order (via a cursor), and duplicate occurrences
+    are skipped.  This guarantees each job appears exactly n_machines
+    times and preserves operation precedence from both parents without
+    repair.
+    """
+    n = len(a_seq)
+    child_seq = np.empty(n, dtype=np.int64)
+
+    # Per-job counters: how many times each job has been placed so far.
+    n_jobs = instance.n_jobs
+    n_machines = instance.n_machines
+    placed = np.zeros(n_jobs, dtype=np.int64)
+
+    # Cursors into each parent.
+    ptr_a = 0
+    ptr_b = 0
+
+    mask = rng.random(n) < 0.5  # True -> take from A, False -> take from B
+
+    for i in range(n):
+        if mask[i]:
+            # Take next valid gene from parent A.
+            while ptr_a < n:
+                g = int(a_seq[ptr_a])
+                ptr_a += 1
+                if placed[g] < n_machines:
+                    child_seq[i] = g
+                    placed[g] += 1
+                    break
+        else:
+            # Take next valid gene from parent B.
+            while ptr_b < n:
+                g = int(b_seq[ptr_b])
+                ptr_b += 1
+                if placed[g] < n_machines:
+                    child_seq[i] = g
+                    placed[g] += 1
+                    break
+
+    # Machine map: uniform crossover.
+    mask_map = rng.random(len(a_map)) < 0.5
+    child_map = np.where(mask_map, a_map, b_map)
+    child_map = repair_machine_map(child_map, compute_nodes, rng)
+
+    return child_seq, child_map
+
+
+
 def mutate_swap(sequence: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     seq = sequence.copy()
     i, j = rng.choice(np.arange(len(seq)), size=2, replace=False)
@@ -137,6 +243,10 @@ def apply_crossover(
         return crossover_two_point(a_seq, b_seq, a_map, b_map, instance, compute_nodes, rng)
     if op_name == "job_preserving":
         return crossover_job_preserving(a_seq, b_seq, a_map, b_map, instance, compute_nodes, rng)
+    if op_name == "jox":
+        return crossover_jox(a_seq, b_seq, a_map, b_map, instance, compute_nodes, rng)
+    if op_name == "ppx":
+        return crossover_ppx(a_seq, b_seq, a_map, b_map, instance, compute_nodes, rng)
     return crossover_uniform(a_seq, b_seq, a_map, b_map, instance, compute_nodes, rng)
 
 
@@ -160,7 +270,8 @@ def apply_mutation(
         seq = mutate_scramble(seq, rng)
     else:
         mmap = mutate_reassign_map(mmap, compute_nodes, rng)
+        mmap = repair_machine_map(mmap, compute_nodes, rng)
 
-    seq = repair_sequence(seq, instance.n_jobs, instance.n_machines, rng)
-    mmap = repair_machine_map(mmap, compute_nodes, rng)
+    # swap, insert, scramble preserve job counts by construction;
+    # only reassign_map needs machine_map repair (applied above).
     return seq, mmap
