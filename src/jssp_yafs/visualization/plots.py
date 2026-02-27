@@ -209,9 +209,9 @@ def _plot_pareto_per_instance(df: pd.DataFrame, fig_root: Path) -> None:
 def _plot_pareto_grid(df: pd.DataFrame, fig_root: Path) -> None:
     instances = sorted(df["instance"].unique())
     n = len(instances)
-    ncols = 4
+    ncols = 3
     nrows = int(np.ceil(n / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.8 * ncols, 3.2 * nrows))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5.0 * ncols, 4.0 * nrows))
     axes = axes.flatten()
 
     for idx, instance in enumerate(instances):
@@ -231,12 +231,12 @@ def _plot_pareto_grid(df: pd.DataFrame, fig_root: Path) -> None:
                 label=_label(algo) if idx == 0 else None,
                 zorder=10 if algo == "enhanced_ga" else 3,
             )
-        ax.set_title(instance, fontsize=9, fontweight="bold")
-        ax.tick_params(labelsize=7)
+        ax.set_title(instance, fontsize=10, fontweight="bold")
+        ax.tick_params(labelsize=8)
         if idx >= (nrows - 1) * ncols:
-            ax.set_xlabel("Makespan", fontsize=8)
+            ax.set_xlabel("Makespan", fontsize=9)
         if idx % ncols == 0:
-            ax.set_ylabel("Energy (J)", fontsize=8)
+            ax.set_ylabel("Energy (J)", fontsize=9)
 
     for idx in range(n, len(axes)):
         axes[idx].set_visible(False)
@@ -259,9 +259,9 @@ def _plot_hv_boxplot_per_instance(per_run: pd.DataFrame, fig_root: Path) -> None
 
     instances = sorted(ga_only["instance"].unique())
     n = len(instances)
-    ncols = 4
+    ncols = 3
     nrows = int(np.ceil(n / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4.0 * ncols, 3.2 * nrows))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5.0 * ncols, 4.0 * nrows))
     axes = axes.flatten()
 
     for idx, instance in enumerate(instances):
@@ -273,12 +273,12 @@ def _plot_hv_boxplot_per_instance(per_run: pd.DataFrame, fig_root: Path) -> None
             linewidth=0.6, fliersize=2, order=_GA_ALGOS, legend=False,
             width=0.6, saturation=0.85,
         )
-        ax.set_title(instance, fontsize=9, fontweight="bold")
+        ax.set_title(instance, fontsize=10, fontweight="bold")
         ax.set_xlabel("")
         ax.set_ylabel("Hypervolume" if idx % ncols == 0 else "")
         labels = [_label(a).replace(" ", "\n") for a in _GA_ALGOS]
         ax.set_xticks(range(len(_GA_ALGOS)))
-        ax.set_xticklabels(labels, fontsize=7, rotation=30, ha="right")
+        ax.set_xticklabels(labels, fontsize=8, rotation=30, ha="right")
         ax.ticklabel_format(axis="y", style="plain", useOffset=False)
         ax.yaxis.set_major_formatter(ticker.ScalarFormatter(useOffset=False))
         ax.yaxis.get_major_formatter().set_scientific(False)
@@ -300,9 +300,9 @@ def _plot_igd_boxplot_per_instance(per_run: pd.DataFrame, fig_root: Path) -> Non
 
     instances = sorted(ga_only["instance"].unique())
     n = len(instances)
-    ncols = 4
+    ncols = 3
     nrows = int(np.ceil(n / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4.0 * ncols, 3.2 * nrows))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5.0 * ncols, 4.0 * nrows))
     axes = axes.flatten()
 
     for idx, instance in enumerate(instances):
@@ -314,12 +314,12 @@ def _plot_igd_boxplot_per_instance(per_run: pd.DataFrame, fig_root: Path) -> Non
             linewidth=0.6, fliersize=2, order=_GA_ALGOS, legend=False,
             width=0.6, saturation=0.85,
         )
-        ax.set_title(instance, fontsize=9, fontweight="bold")
+        ax.set_title(instance, fontsize=10, fontweight="bold")
         ax.set_xlabel("")
         ax.set_ylabel("IGD" if idx % ncols == 0 else "")
         labels = [_label(a).replace(" ", "\n") for a in _GA_ALGOS]
         ax.set_xticks(range(len(_GA_ALGOS)))
-        ax.set_xticklabels(labels, fontsize=7, rotation=30, ha="right")
+        ax.set_xticklabels(labels, fontsize=8, rotation=30, ha="right")
         ax.ticklabel_format(axis="y", style="plain", useOffset=False)
 
     for idx in range(n, len(axes)):

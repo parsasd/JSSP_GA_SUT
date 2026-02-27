@@ -1,0 +1,22 @@
+% -------------------------------------------------------
+%  English Abstract
+% -------------------------------------------------------
+
+\begin{latin}
+
+\begin{center}
+\textbf{Abstract}
+\end{center}
+\baselineskip=.8\baselineskip
+
+The Job Shop Scheduling Problem (JSSP) is a fundamental combinatorial optimization problem with wide applications in manufacturing and industry. This thesis addresses the JSSP in a heterogeneous three-tier edge-fog-cloud computing infrastructure. Each scheduled operation is executed on a compute node, and three objectives are simultaneously optimized: minimizing makespan, minimizing total energy consumption, and maximizing system reliability.
+
+We employ the NSGA-II multi-objective genetic algorithm enhanced with three key improvements: (1)~smart initialization combining heuristic seeds (SPT, MWR) with random diversity, (2)~adaptive operator selection via a UCB1 multi-armed bandit mechanism, and (3)~memetic local search. The edge-fog-cloud infrastructure is simulated using the YAFS (Yet Another Fog Simulator) framework, and all three objective functions are computed deterministically.
+
+Experiments are conducted on 15 standard benchmark instances from the FT, LA, ORB, ABZ, TA, SWV, and YN families, each with 10 random seeds. Results are evaluated using hypervolume (HV) and inverted generational distance (IGD) indicators, and validated with Friedman and Wilcoxon signed-rank tests (with Holm correction). The enhanced GA consistently outperforms the plain GA and dispatching heuristics on most instances. An ablation study confirms that both evaluated enhancement components contribute meaningfully to performance.
+
+
+\bigskip\noindent\textbf{Keywords}:
+Job Shop Scheduling, Multi-Objective Optimization, Genetic Algorithm, NSGA-II, Edge-Fog-Cloud Computing, Hypervolume
+
+\end{latin}

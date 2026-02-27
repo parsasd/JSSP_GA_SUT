@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 \(Macintosh; Intel Mac OS X 10_15_7\) AppleWebKit/605.1.15 \(KHTML, like Gecko\) Version/26.3 Safari/605.1.15" version="29.3.4">
+  <diagram name="Page-1" id="N9y3tdIuFs7_7C3Ka8Ij">
+    <mxGraphModel dx="1018" dy="781" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="yKCys6RUyweB_Etxn9_W-3" edge="1" parent="1" source="yKCys6RUyweB_Etxn9_W-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="yKCys6RUyweB_Etxn9_W-2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="کارهای تولیدی&lt;div&gt;\(سفارش ها و عملیات\)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="5" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-5" edge="1" parent="1" source="yKCys6RUyweB_Etxn9_W-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="yKCys6RUyweB_Etxn9_W-4" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="264" y="160" />
+              <mxPoint x="464" y="160" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-7" edge="1" parent="1" source="yKCys6RUyweB_Etxn9_W-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="yKCys6RUyweB_Etxn9_W-6" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="264" y="110" />
+              <mxPoint x="785" y="110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-9" edge="1" parent="1" source="yKCys6RUyweB_Etxn9_W-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="yKCys6RUyweB_Etxn9_W-8" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="264" y="140" />
+              <mxPoint x="625" y="140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-15" edge="1" parent="1" source="yKCys6RUyweB_Etxn9_W-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="yKCys6RUyweB_Etxn9_W-14" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="&lt;div&gt;زمان‌بند چند هدفه&lt;br&gt;&lt;/div&gt;&lt;div&gt;مسئله زمانبندی کارآگاهی&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="204" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="لبه" vertex="1">
+          <mxGeometry height="60" width="120" x="404" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="مه" vertex="1">
+          <mxGeometry height="60" width="120" x="725" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-11" edge="1" parent="1" source="yKCys6RUyweB_Etxn9_W-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="yKCys6RUyweB_Etxn9_W-10" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="ابر" vertex="1">
+          <mxGeometry height="60" width="120" x="565" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="اجرای عملیات روی زیرساخت ناهمگن&lt;div&gt;لبه-مه-ابر&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="160" x="655" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-17" edge="1" parent="1" source="yKCys6RUyweB_Etxn9_W-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="yKCys6RUyweB_Etxn9_W-16" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=center;fontSize=13;" value="&lt;div&gt;&amp;nbsp;:اهداف هم‌زمان&lt;br&gt;&lt;/div&gt;&lt;div&gt;کمینه سازی زمان تکمیل کار-&amp;nbsp;&lt;br&gt;&lt;/div&gt;&lt;blockquote style=&quot;margin: 0px 0px 0px 40px; border: medium; padding: 0px;&quot;&gt;کمینه سازی انرژی-&lt;/blockquote&gt;بیشبنه سازی قابلیت اطمینان-" vertex="1">
+          <mxGeometry height="90" width="181" x="173.5" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-20" edge="1" parent="1" source="yKCys6RUyweB_Etxn9_W-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="yKCys6RUyweB_Etxn9_W-19" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=center;fontSize=13;" value="جبهه پارتو برای تصمیم گیرنده" vertex="1">
+          <mxGeometry height="90" width="181" x="415" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-18" edge="1" parent="1" source="yKCys6RUyweB_Etxn9_W-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.992;entryY=0.422;entryDx=0;entryDy=0;entryPerimeter=0;" target="yKCys6RUyweB_Etxn9_W-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yKCys6RUyweB_Etxn9_W-19" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=center;fontSize=13;" value="&lt;div&gt;:خروجی عملیاتی&lt;br&gt;&lt;/div&gt;&lt;div&gt;کاهش هزینه&lt;/div&gt;&lt;div&gt;پاسخگویی بهتر&lt;/div&gt;&lt;div&gt;اجرای پایدارتر&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="181" x="415" y="500" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

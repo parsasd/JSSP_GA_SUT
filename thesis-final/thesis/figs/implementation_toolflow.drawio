@@ -1,0 +1,43 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 \(Macintosh; Intel Mac OS X 10_15_7\) AppleWebKit/605.1.15 \(KHTML, like Gecko\) Version/26.3 Safari/605.1.15" version="29.5.2">
+  <diagram name="Page-1" id="y0tP9dzf3uJcjA0LSfAb">
+    <mxGraphModel dx="1018" dy="781" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-1" edge="1" parent="1" source="3Kk9sAR7M5yPwaOvUEsp-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="3Kk9sAR7M5yPwaOvUEsp-4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="بارگذاری نمونه‌ها&lt;div&gt;\(JSSP داده های\)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="20" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-3" edge="1" parent="1" source="3Kk9sAR7M5yPwaOvUEsp-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="3Kk9sAR7M5yPwaOvUEsp-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="&lt;div&gt;کدگذاری کروموزوم&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="190" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-5" edge="1" parent="1" source="3Kk9sAR7M5yPwaOvUEsp-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="3Kk9sAR7M5yPwaOvUEsp-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="موتور تکاملی&lt;div&gt;\(NSGA-II + UCB1\)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="360" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-19" edge="1" parent="1" source="3Kk9sAR7M5yPwaOvUEsp-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="3Kk9sAR7M5yPwaOvUEsp-18" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="شاخص‌ها و آزمون‌های آماری&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="700" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-17" edge="1" parent="1" source="3Kk9sAR7M5yPwaOvUEsp-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="3Kk9sAR7M5yPwaOvUEsp-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="YAFS شبیه‌ساز&lt;div&gt;\(لبه٬مه٬ابر\)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="530" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="3Kk9sAR7M5yPwaOvUEsp-18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;" value="&amp;nbsp; مصنوعات خروجی: جبهه‌های پارتو٬نمودارها٬نتایج مطالعه حذفی٬گزارش بازتولید‌پذیری" vertex="1">
+          <mxGeometry height="60" width="400" x="350" y="370" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
